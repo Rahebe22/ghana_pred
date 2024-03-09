@@ -1,0 +1,118 @@
+
+
+  ## aws
+  bucket: activemapper
+  prefix_out: DL/Result/semantic_segmentation/boka/test
+
+  ## data loading
+  dir_data: s3://activemapper/data_DL
+  catalog: semantic_catalog_train_val_tmp.csv
+  img_path_cols: ['dir_gs', 'dir_os']
+  label_path_col: 'dir_label'
+  train_group: [2, 3, 4]
+  validate_group: [3, 4]
+  patch_size: 200
+  buffer: 12
+  composite_buffer: 11
+  bands: 8
+  class_number: 2
+
+  transformation: ['vflip', 'hflip', 'rotate', 'resize', 'shift_brightness']
+  rotation_degrees: [-90, 90]
+  brightness_shift_subsets: [4, 4]
+
+  ## training
+Train_Validate:
+  model: Unet
+  initial_params: s3://activemapper/DL/Result/semantic_segmentation/boka/test/unet_params.pth
+  freeze_params: list(range(58))
+  train_batch: 32
+  validate_batch: 10
+  epoch: 300
+  criterion: BalancedCrossEntropyLoss()
+  optimizer: nesterov
+  learning_rate_init: 0.01
+  learning_rate_policy: StepLR
+  learning_rate_decay: 0.95
+  learning_rate_decay_step: 5
+  momentum: 0.95
+  gpu_devices: [1, 2, 3]
+  resume: False
+  resume_epoch: 0
+  checkpoint_upload: 1
+
+
+Predict:
+  bucket: activemapper
+  prefix_out: DL/Result/semantic_segmentation/boka/test
+  ## data loading
+  dir_data: s3://activemapper/data_DL
+  catalog: semantic_catalog_predict_tmp.csv
+  img_path_cols: ['dir_gs', 'dir_os']
+
+  patch_size: 250
+  buffer: 179
+  composite_buffer: 179
+  bands: 8
+  class_number: 2
+  pred_batch: 2
+  average_neighbors: True
+  shrink_pixels: 54
+
+  ## model setting, will be ignored if prediction right follows train
+  model: Unet
+  initial_params:
+  gpu_devices: [1, 3]
+
+
+Sites_Selection:
+  grid_size: 200
+  run_local: True
+  dir_csvs: /home/boka/Documents/AgrMapping/other/csvs
+
+  # correlation
+  dir_data: /home/boka/Documents/AgrMapping/AgrMapping_Onedrive/data_DL/images/planet/fix
+  dir_correlation: /home/boka/Documents/AgrMapping/other/csvs
+  fn_correlation: correlation_validate_test.csv
+  catalog: planet_catalog_full_fix.csv
+  col_names_ab: ['name_val', 'name_pred']
+  names_corr_a: names_validate_test.csv
+  names_corr_b: names_full_test.csv
+  buffer_a: 11
+  buffer_b: 11
+
+  # metrics calculation -- including val-pred match, and metrics on corresponding prediciton
+  aois: range(1,17)
+  dir_pred_catalogs: /home/boka/Documents/AgrMapping/other/csvs
+  fn_pred_catalog_format: semantic_catalog_predict_retiled_{}.csv
+  dir_pred_format: s3://activemapper/DL/Result/semantic_segmentation/boka/relabeller/coarse_as_benchmark/balanced_tversky_g09/new/d3500/refine_freeze58/ep150/predict/predict_{}/Score_1/score_c{}_r{}.tif
+  dir_label_format: s3://activemapper/data_DL/labels/semantic_segmentation/with_boundary/{}_{}_{}.tif
+  names_validate: names_validate_test.csv
+  dir_val_pred_matched: /home/boka/Documents/AgrMapping/other/csvs
+  fn_val_pred_matched: catalog_val_pred_matched.csv
+  dir_metrics: /home/boka/Documents/AgrMapping/other/csvs
+  fn_metrics: val_metrics_test.csv
+
+  # select sites
+  dir_new_sites: /home/boka/Documents/AgrMapping/other/csvs
+  fn_new_sites: new_sites_test.csv
+  sites_number: 20
+  validate_sample_rate: 0.1
+  sample_criterion: accuracy
+  metric_performance_relation: positive # positive negative
+
+AWS:
+  # to access s3 resources from local machine
+  aws_access:
+  aws_region: us-east-1
+  aws_secret:
+
+Rasterize_Labels:
+  raster_mode: binary #three_class or binary
+  dir_grids: /home/boka/Documents/AgrMapping/Scripts/activemapper/inst/extdata/ghana_grid.csv
+  dir_catalog: /home/boka/Documents/AgrMapping/other/csvs/catalog_rasterize_test.csv
+  dir_out: /home/boka/Documents/AgrMapping/Crop_type/labels_test
+  col_shapefile: dir_segment
+  crs_epsg: 4326
+  resolution: 2.5e-5
+  diam: 0.0025
